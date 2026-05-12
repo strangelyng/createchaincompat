@@ -1,0 +1,19 @@
+{
+  "required": true,
+  "package": "net.strangelyng.createchaincompat.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "accessors.BlockEntityAccessor",
+    "create.chains.ChainConveyorBlockMixin",
+    "create.chains.ChainConveyorBlockEntityMixin",
+    "create.chains.ChainConveyorConnectionHandlerMixin",
+    "create.chains.ChainConveyorConnectionPacketMixin",
+    "create.chains.ChainConveyorRendererMixin"
+  ],
+  "client": [
+
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
