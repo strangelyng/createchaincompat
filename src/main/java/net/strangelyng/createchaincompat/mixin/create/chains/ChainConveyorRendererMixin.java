@@ -13,6 +13,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -51,7 +52,8 @@ public abstract class ChainConveyorRendererMixin {
                                        PoseTransformStack chain, int light1, int light2, boolean far) {
         Map<BlockPos, ItemLike> chainMap = ((ChainConveyorInterface)be).chaincompat$getConnectionsChain();
         ItemLike chainItem = chainMap.get(blockPos);
-        Item item = chainItem.asItem();
+
+        Item item = chainItem != null ? chainItem.asItem() : Items.CHAIN;
 
         if (item instanceof BlockItem blockItem) {
             ResourceLocation chainTexture = CHAIN_RS.get(blockItem);
@@ -60,7 +62,10 @@ public abstract class ChainConveyorRendererMixin {
                 ResourceLocation rl = level.registryAccess().registryOrThrow(Registries.BLOCK).getKey(block);
                 if (rl == null) return;
 
-                // TODO: Rework getting the chain texture, either using model json to fetch, or a datamap with a fallback?
+                // TODO: Rework getting the chainTexture for improved compatibility...
+                // Fetch from model Json?
+                // Manually Datamap with Defaults/Fallback?
+                // Generate Resource Pack at Runtime?
                 chainTexture = ResourceLocation.tryBuild(rl.getNamespace(), "textures/block/"+rl.getPath()+".png");
                 CHAIN_RS.put(blockItem, chainTexture);
             }
