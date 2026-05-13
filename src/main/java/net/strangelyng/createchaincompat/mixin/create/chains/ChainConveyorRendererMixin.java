@@ -11,6 +11,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.BlockItem;
@@ -22,6 +23,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.model.data.ModelData;
 import net.strangelyng.createchaincompat.ChainConveyorInterface;
+import net.strangelyng.createchaincompat.datamap.ChainTexData;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -36,11 +38,13 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import static net.strangelyng.createchaincompat.datamap.ChainDataMap.CHAIN_TEX_DATA;
+
 @Mixin(value = ChainConveyorRenderer.class, remap = false)
 public abstract class ChainConveyorRendererMixin {
 
     @Unique
-    private static final Map<BlockItem, ResourceLocation> CHAIN_RS = new HashMap<>();
+    private static final Map<Item, ResourceLocation> CHAIN_RS = new HashMap<>();
 
     @Shadow
     public static final ResourceLocation CHAIN_LOCATION = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/chain.png");
@@ -57,23 +61,35 @@ public abstract class ChainConveyorRendererMixin {
         ItemLike chainItem = chainMap.get(blockPos);
         Item item = chainItem != null ? chainItem.asItem() : Items.CHAIN;
 
-        if (item instanceof BlockItem blockItem) {
-            ResourceLocation chainTexture = CHAIN_RS.get(blockItem);
+        Holder<Item> holder = item.builtInRegistryHolder();
 
-            if (chainTexture == null) {
-                Block block = blockItem.getBlock();
-                ResourceLocation rl = level.registryAccess().registryOrThrow(Registries.BLOCK).getKey(block);
-                if (rl == null) return;
+        ChainTexData data = holder.getData(CHAIN_TEX_DATA);
+        if (data != null) {
+            ResourceLocation chainTexture = ResourceLocation.parse(data.texture());
+            CHAIN_RS.put(item, chainTexture);
 
-                BakedModel chainModel = Minecraft.getInstance().getBlockRenderer().getBlockModel(block.defaultBlockState());
-                ResourceLocation chainLoc = chainModel.getParticleIcon(ModelData.EMPTY).contents().name();
-
-                chainTexture = ResourceLocation.tryBuild(chainLoc.getNamespace(), "textures/"+chainLoc.getPath()+".png");
-                CHAIN_RS.put(blockItem, chainTexture);
-            }
             chaincompat$renderChain(ms, buffer, animation, stats.chainLength(), light1, light2, far, chainTexture);
         } else {
-            chaincompat$renderChain(ms, buffer, animation, stats.chainLength(), light1, light2, far, CHAIN_LOCATION);
+            if (item instanceof BlockItem blockItem) {
+                ResourceLocation chainTexture = CHAIN_RS.get(blockItem);
+
+                if (chainTexture == null) {
+                    Block block = blockItem.getBlock();
+
+                    ResourceLocation rl = level.registryAccess().registryOrThrow(Registries.BLOCK).getKey(block);
+                    if (rl == null) return;
+
+                    BakedModel chainModel = Minecraft.getInstance().getBlockRenderer().getBlockModel(block.defaultBlockState());
+                    ResourceLocation chainLoc = chainModel.getParticleIcon(ModelData.EMPTY).contents().name();
+
+                    chainTexture = ResourceLocation.tryBuild(chainLoc.getNamespace(), "textures/"+chainLoc.getPath()+".png");
+
+                    CHAIN_RS.put(blockItem, chainTexture);
+                }
+                chaincompat$renderChain(ms, buffer, animation, stats.chainLength(), light1, light2, far, chainTexture);
+            } else {
+                chaincompat$renderChain(ms, buffer, animation, stats.chainLength(), light1, light2, far, CHAIN_LOCATION);
+            }
         }
     }
 

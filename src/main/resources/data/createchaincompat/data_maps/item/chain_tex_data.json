@@ -1,0 +1,7 @@
+{
+  "values": {
+    "minecraft:melon_slice": {
+      "texture": "minecraft:textures/block/melon_side.png"
+    }
+  }
+}
