@@ -1,4 +1,4 @@
-package net.strangelyng.createchaincompat.datamap;
+package net.strangelyng.createchaincompat.datamaps;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
@@ -19,7 +19,7 @@ public class ChainDataMap {
     ).synced(ChainTexData.CODEC, false).build();
 
     @SubscribeEvent
-    public static void registerDataMapTypes(RegisterDataMapTypesEvent event) {
+    public static void register(RegisterDataMapTypesEvent event) {
         event.register(CHAIN_TEX_DATA);
     }
 }

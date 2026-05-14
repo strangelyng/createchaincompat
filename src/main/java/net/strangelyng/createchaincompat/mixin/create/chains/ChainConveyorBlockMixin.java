@@ -7,6 +7,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ItemLike;
 import net.strangelyng.createchaincompat.ChainConveyorInterface;
 import org.spongepowered.asm.mixin.Mixin;
@@ -21,7 +22,11 @@ public abstract class ChainConveyorBlockMixin {
     private static void chaincompat$placeItemBackInInventory(Player player, ChainConveyorBlockEntity be, CallbackInfo ci,
                                                              @Local BlockPos targetPos, @Local int chainCost) {
         ItemLike chain = ((ChainConveyorInterface) be).chaincompat$getConnectionsChain().get(targetPos);
-        if (chain != null) player.getInventory().placeItemBackInInventory(new ItemStack(chain, Math.min(chainCost, 64)));
+        if (chain != null) {
+            player.getInventory().placeItemBackInInventory(new ItemStack(chain, Math.min(chainCost, 64)));
+        } else {
+            player.getInventory().placeItemBackInInventory(new ItemStack(Items.CHAIN, Math.min(chainCost, 64)));
+        }
     }
 
     @Redirect(method = "lambda$onSneakWrenched$1", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Inventory;placeItemBackInInventory(Lnet/minecraft/world/item/ItemStack;)V"))

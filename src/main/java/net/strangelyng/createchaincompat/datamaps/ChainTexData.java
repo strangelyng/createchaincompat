@@ -1,4 +1,4 @@
-package net.strangelyng.createchaincompat.datamap;
+package net.strangelyng.createchaincompat.datamaps;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;

@@ -7,11 +7,10 @@
     "create.chains.ChainConveyorBlockMixin",
     "create.chains.ChainConveyorBlockEntityMixin",
     "create.chains.ChainConveyorConnectionHandlerMixin",
-    "create.chains.ChainConveyorConnectionPacketMixin",
-    "create.chains.ChainConveyorRendererMixin"
+    "create.chains.ChainConveyorConnectionPacketMixin"
   ],
   "client": [
-
+    "create.chains.ChainConveyorRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1
