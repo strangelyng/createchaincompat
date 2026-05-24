@@ -60,20 +60,22 @@ public abstract class ChainConveyorRendererMixin {
                                        Iterator var8, BlockPos blockPos, ChainConveyorBlockEntity.ConnectionStats stats,
                                        Vec3 diff, double yaw, double pitch, Level level, BlockPos tilePos, Vec3 startOffset,
                                        PoseTransformStack chain, int light1, int light2, boolean far) {
+
         Map<BlockPos, ItemLike> chainMap = ((ChainConveyorInterface)be).chaincompat$getConnectionsChain();
         ItemLike chainItem = chainMap.get(blockPos);
         Item item = chainItem != null ? chainItem.asItem() : Items.CHAIN;
 
         Holder<Item> holder = item.builtInRegistryHolder();
+        ChainTexData texData = holder.getData(CHAIN_TEX_DATA);
 
-        ChainTexData data = holder.getData(CHAIN_TEX_DATA);
-        if (data != null) {
-            ResourceLocation chainTexture = ResourceLocation.parse(data.texture());
-            CHAIN_RS.put(item, chainTexture);
+        if (texData != null) {
+            // If the connector item has an entry in the chain_tex_data data map
+            ResourceLocation chainTexture = ResourceLocation.parse(texData.texture());
 
             chaincompat$renderChain(ms, buffer, animation, stats.chainLength(), light1, light2, far, chainTexture);
         } else {
             if (item instanceof BlockItem blockItem) {
+                // If the connector item is an item that can be placed (BlockItem)
                 ResourceLocation chainTexture = CHAIN_RS.get(blockItem);
 
                 if (chainTexture == null) {
@@ -91,6 +93,7 @@ public abstract class ChainConveyorRendererMixin {
                 }
                 chaincompat$renderChain(ms, buffer, animation, stats.chainLength(), light1, light2, far, chainTexture);
             } else {
+                // If the connector item is not a placeable item
                 chaincompat$renderChain(ms, buffer, animation, stats.chainLength(), light1, light2, far, CHAIN_LOCATION);
             }
         }
@@ -102,6 +105,7 @@ public abstract class ChainConveyorRendererMixin {
     }
 
     @Unique
+    // Copy of default renderChain code, but with added chainTexture variable
     private static void chaincompat$renderChain(PoseStack ms, MultiBufferSource buffer, float animation, float length, int light1,
                                                 int light2, boolean far, ResourceLocation chainTexture) {
         float radius = far ? 1f / 16f : 1.5f / 16f;

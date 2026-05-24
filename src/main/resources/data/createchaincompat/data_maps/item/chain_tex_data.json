@@ -29,6 +29,15 @@
         }
       ],
       "texture": "createchaincompat:textures/block/rope_generic.png"
+    },
+    "simulated:rope_coupling": {
+      "neoforge:conditions": [
+        {
+          "type": "neoforge:mod_loaded",
+          "modid": "simulated"
+        }
+      ],
+      "texture": "simulated:textures/block/rope_particle.png"
     }
   }
 }
