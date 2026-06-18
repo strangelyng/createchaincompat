@@ -10,6 +10,8 @@ import net.neoforged.neoforge.registries.datamaps.RegisterDataMapTypesEvent;
 
 import static net.strangelyng.createchaincompat.CreateChainCompat.MOD_ID;
 
+// TODO: REPLACE WITH CUSTOM RESORUCE FORMAT?
+
 @EventBusSubscriber(modid = MOD_ID)
 public class ChainDataMap {
     public static final DataMapType<Item, ChainTexData> CHAIN_TEX_DATA = DataMapType.builder(
@@ -20,6 +22,7 @@ public class ChainDataMap {
 
     @SubscribeEvent
     public static void register(RegisterDataMapTypesEvent event) {
+
         event.register(CHAIN_TEX_DATA);
     }
 }

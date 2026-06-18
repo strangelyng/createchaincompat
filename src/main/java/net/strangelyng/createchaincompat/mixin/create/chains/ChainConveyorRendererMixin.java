@@ -6,11 +6,15 @@ import com.simibubi.create.content.kinetics.chainConveyor.ChainConveyorBlockEnti
 import com.simibubi.create.content.kinetics.chainConveyor.ChainConveyorRenderer;
 import com.simibubi.create.foundation.render.RenderTypes;
 import dev.engine_room.flywheel.lib.transform.PoseTransformStack;
+import net.createmod.catnip.render.CachedBuffers;
+import net.createmod.catnip.render.SuperByteBuffer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.BlockItem;
@@ -54,28 +58,34 @@ public abstract class ChainConveyorRendererMixin {
 
     @Inject(method = "renderChains", at = @At(
             value = "INVOKE", target = "Lcom/simibubi/create/content/kinetics/chainConveyor/ChainConveyorRenderer;renderChain(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;FFIIZ)V"),
-    locals = LocalCapture.CAPTURE_FAILSOFT)
+            locals = LocalCapture.CAPTURE_FAILSOFT)
     void chaincompat$beforeRenderChain(ChainConveyorBlockEntity be, PoseStack ms, MultiBufferSource buffer,
                                        int light, int overlay, CallbackInfo ci, float time, float animation,
                                        Iterator var8, BlockPos blockPos, ChainConveyorBlockEntity.ConnectionStats stats,
                                        Vec3 diff, double yaw, double pitch, Level level, BlockPos tilePos, Vec3 startOffset,
                                        PoseTransformStack chain, int light1, int light2, boolean far) {
-
         Map<BlockPos, ItemLike> chainMap = ((ChainConveyorInterface)be).chaincompat$getConnectionsChain();
         ItemLike chainItem = chainMap.get(blockPos);
         Item item = chainItem != null ? chainItem.asItem() : Items.CHAIN;
 
         Holder<Item> holder = item.builtInRegistryHolder();
+
         ChainTexData texData = holder.getData(CHAIN_TEX_DATA);
 
-        if (texData != null) {
-            // If the connector item has an entry in the chain_tex_data data map
-            ResourceLocation chainTexture = ResourceLocation.parse(texData.texture());
 
-            chaincompat$renderChain(ms, buffer, animation, stats.chainLength(), light1, light2, far, chainTexture);
+        if (texData != null) {
+            if (texData.model().isPresent()) {
+                ResourceLocation chainModel = ResourceLocation.parse(texData.model().get());
+
+                chaincompat$renderCustomModelChain(ms, buffer, animation, stats.chainLength(), light, chainModel);
+            } else if (texData.texture().isPresent()) {
+                ResourceLocation chainTexture = ResourceLocation.parse(texData.texture().get());
+                CHAIN_RS.put(item, chainTexture);
+
+                chaincompat$renderChain(ms, buffer, animation, stats.chainLength(), light1, light2, far, chainTexture);
+            }
         } else {
             if (item instanceof BlockItem blockItem) {
-                // If the connector item is an item that can be placed (BlockItem)
                 ResourceLocation chainTexture = CHAIN_RS.get(blockItem);
 
                 if (chainTexture == null) {
@@ -93,7 +103,6 @@ public abstract class ChainConveyorRendererMixin {
                 }
                 chaincompat$renderChain(ms, buffer, animation, stats.chainLength(), light1, light2, far, chainTexture);
             } else {
-                // If the connector item is not a placeable item
                 chaincompat$renderChain(ms, buffer, animation, stats.chainLength(), light1, light2, far, CHAIN_LOCATION);
             }
         }
@@ -105,7 +114,6 @@ public abstract class ChainConveyorRendererMixin {
     }
 
     @Unique
-    // Copy of default renderChain code, but with added chainTexture variable
     private static void chaincompat$renderChain(PoseStack ms, MultiBufferSource buffer, float animation, float length, int light1,
                                                 int light2, boolean far, ResourceLocation chainTexture) {
         float radius = far ? 1f / 16f : 1.5f / 16f;
@@ -120,6 +128,32 @@ public abstract class ChainConveyorRendererMixin {
         VertexConsumer vc = buffer.getBuffer(RenderTypes.chain(chainTexture));
         renderPart(ms, vc, length, 0.0F, radius, radius, 0.0F, -radius, 0.0F, 0.0F, -radius, minU, maxU, minV, maxV,
                 light1, light2, far);
+
+        ms.popPose();
+    }
+
+    @Unique
+    private static void chaincompat$renderCustomModelChain(PoseStack ms, MultiBufferSource buffer, float animation, float length, int light, ResourceLocation chainModel) {
+        ms.pushPose();
+
+        for (float yOffset = -1; yOffset < length + 1 ; yOffset += 1.0f) {
+            float currentPos = yOffset + animation;
+            if (currentPos < -1 || currentPos > length) {
+                continue;
+            }
+
+            ms.pushPose();
+            ms.translate(0, currentPos, 0);
+
+            // TODO: RENDER FROM JSON AT RESOURCELOCATION
+            SuperByteBuffer linkBuffer = CachedBuffers.block(BuiltInRegistries.BLOCK.get(chainModel).defaultBlockState());
+
+            linkBuffer
+                    .light(light)
+                    .renderInto(ms, buffer.getBuffer(RenderType.cutoutMipped()));
+
+            ms.popPose();
+        }
 
         ms.popPose();
     }

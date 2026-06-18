@@ -22,8 +22,8 @@ public class CreateChainCompat {
             Registries.ITEM, ResourceLocation.fromNamespaceAndPath(MOD_ID, "valid_for_chain_conveyor"));
 
     public CreateChainCompat(IEventBus bus, ModContainer mod) {
-
         bus.addListener(this::commonSetup);
+
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
