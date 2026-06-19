@@ -16,6 +16,7 @@ public class ClientEventHandler {
         bus.addListener(ClientEventHandler::onRegisterAdditional);
     }
 
+    // This event is called on resource pack reload (F3+T), which should allow updates without restarting the game
     public static void onRegisterAdditional(ModelEvent.RegisterAdditional event) {
         CreateChainCompat.LOGGER.debug("CCC: onRegisterAdditional");
         CreateChainCompat.LOGGER.debug("CCC: " + CreateChainCompatConfig.MODELS.get());

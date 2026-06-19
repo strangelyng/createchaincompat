@@ -10,6 +10,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.ModelBlockRenderer;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.core.BlockPos;
@@ -35,15 +36,14 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 
 import static net.strangelyng.createchaincompat.datamaps.ChainDataMap.CHAIN_TEX_DATA;
 
 @Mixin(value = ChainConveyorRenderer.class, remap = false)
 public abstract class ChainConveyorRendererMixin {
 
+    // I suspect the caching is being done in the wrong order atm...
     @Unique
     private static final Map<Item, ResourceLocation> CHAIN_RS = new HashMap<>();
 
@@ -75,7 +75,7 @@ public abstract class ChainConveyorRendererMixin {
 
         if (texData != null) {
             if (texData.model().isPresent()) {
-                ResourceLocation chainModel = ResourceLocation.parse(texData.model().get());
+                ModelResourceLocation chainModel = ModelResourceLocation.standalone(ResourceLocation.parse(texData.model().get()));
 
                 chaincompat$renderCustomModelChain(ms, buffer, animation, stats.chainLength(), light, chainModel);
             } else if (texData.texture().isPresent()) {
@@ -133,9 +133,11 @@ public abstract class ChainConveyorRendererMixin {
     }
 
     @Unique
-    private static void chaincompat$renderCustomModelChain(PoseStack ms, MultiBufferSource buffer, float animation, float length, int light, ResourceLocation chainModel) {
-        for (float yOffset = -1; yOffset < length + 1 ; yOffset += 1.0f) {
-            float currentPos = yOffset + animation;
+    private static void chaincompat$renderCustomModelChain(PoseStack ms, MultiBufferSource buffer, float animation, float length, int light, ModelResourceLocation chainModel) {
+
+        // chain has lots of ugly clipping at angles blech
+        for (float transform = -1; transform < length + 1 ; transform += 1.0f) {
+            float currentPos = transform + animation;
             if (currentPos < -1 || currentPos > length) {
                 continue;
             }
@@ -143,21 +145,21 @@ public abstract class ChainConveyorRendererMixin {
             ms.pushPose();
             ms.translate(0, currentPos, 0);
 
-            // TODO: CACHING? STORE LOCATIONS IN A MAP
+            // TODO: CACHING? STORE ModelResourceLocation and Baked model in map?
             ModelBlockRenderer blockRenderer = Minecraft.getInstance().getBlockRenderer().getModelRenderer();
 
-            BakedModel bakedModel = Minecraft.getInstance().getModelManager().getModel(ModelResourceLocation.standalone(chainModel));
+            BakedModel bakedModel = Minecraft.getInstance().getModelManager().getModel(chainModel);
 
             blockRenderer.renderModel(
                     ms.last(),
-                    buffer.getBuffer(RenderType.cutoutMipped()),
+                    buffer.getBuffer(RenderType.CUTOUT_MIPPED),
                     null,
                     bakedModel,
                     0.0f,
                     0.0f,
                     0.0f,
                     light,
-                    1,
+                    OverlayTexture.NO_OVERLAY,
                     ModelData.EMPTY,
                     RenderType.CUTOUT_MIPPED
             );
