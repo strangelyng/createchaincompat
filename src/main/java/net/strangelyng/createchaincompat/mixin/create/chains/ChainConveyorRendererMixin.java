@@ -6,15 +6,14 @@ import com.simibubi.create.content.kinetics.chainConveyor.ChainConveyorBlockEnti
 import com.simibubi.create.content.kinetics.chainConveyor.ChainConveyorRenderer;
 import com.simibubi.create.foundation.render.RenderTypes;
 import dev.engine_room.flywheel.lib.transform.PoseTransformStack;
-import net.createmod.catnip.render.CachedBuffers;
-import net.createmod.catnip.render.SuperByteBuffer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.block.ModelBlockRenderer;
 import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.BlockItem;
@@ -56,6 +55,7 @@ public abstract class ChainConveyorRendererMixin {
                                    float pX1, float pZ1, float pX2, float pZ2, float pX3, float pZ3, float pMinU, float pMaxU, float pMinV,
                                    float pMaxV, int light1, int light2, boolean far) {}
 
+    // TODO: READ FROM CONFIG INSTEAD OF DATAMAP
     @Inject(method = "renderChains", at = @At(
             value = "INVOKE", target = "Lcom/simibubi/create/content/kinetics/chainConveyor/ChainConveyorRenderer;renderChain(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;FFIIZ)V"),
             locals = LocalCapture.CAPTURE_FAILSOFT)
@@ -134,8 +134,6 @@ public abstract class ChainConveyorRendererMixin {
 
     @Unique
     private static void chaincompat$renderCustomModelChain(PoseStack ms, MultiBufferSource buffer, float animation, float length, int light, ResourceLocation chainModel) {
-        ms.pushPose();
-
         for (float yOffset = -1; yOffset < length + 1 ; yOffset += 1.0f) {
             float currentPos = yOffset + animation;
             if (currentPos < -1 || currentPos > length) {
@@ -145,16 +143,36 @@ public abstract class ChainConveyorRendererMixin {
             ms.pushPose();
             ms.translate(0, currentPos, 0);
 
-            // TODO: RENDER FROM JSON AT RESOURCELOCATION
-            SuperByteBuffer linkBuffer = CachedBuffers.block(BuiltInRegistries.BLOCK.get(chainModel).defaultBlockState());
+            // TODO: CACHING? STORE LOCATIONS IN A MAP
+            ModelBlockRenderer blockRenderer = Minecraft.getInstance().getBlockRenderer().getModelRenderer();
 
-            linkBuffer
-                    .light(light)
-                    .renderInto(ms, buffer.getBuffer(RenderType.cutoutMipped()));
+            BakedModel bakedModel = Minecraft.getInstance().getModelManager().getModel(ModelResourceLocation.standalone(chainModel));
+
+            blockRenderer.renderModel(
+                    ms.last(),
+                    buffer.getBuffer(RenderType.cutoutMipped()),
+                    null,
+                    bakedModel,
+                    0.0f,
+                    0.0f,
+                    0.0f,
+                    light,
+                    1,
+                    ModelData.EMPTY,
+                    RenderType.CUTOUT_MIPPED
+            );
+
+            /*
+             * BLOCK-BASED IMPLEMENTATION
+             *
+             * SuperByteBuffer linkBuffer = CachedBuffers.block(BuiltInRegistries.BLOCK.get(chainModel).defaultBlockState());
+             *
+             * linkBuffer
+             *        .light(light)
+             *        .renderInto(ms, buffer.getBuffer(RenderType.cutoutMipped()));
+             */
 
             ms.popPose();
         }
-
-        ms.popPose();
     }
 }
