@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.simibubi.create.content.kinetics.chainConveyor.ChainConveyorBlockEntity;
 import com.simibubi.create.content.kinetics.chainConveyor.ChainConveyorRenderer;
+import com.simibubi.create.foundation.model.BakedQuadHelper;
 import com.simibubi.create.foundation.render.RenderTypes;
 import dev.engine_room.flywheel.lib.transform.PoseTransformStack;
 import net.minecraft.client.Minecraft;
@@ -12,6 +13,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.ModelBlockRenderer;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.core.BlockPos;
@@ -143,65 +145,53 @@ public abstract class ChainConveyorRendererMixin {
     @Unique
     private static void chaincompat$renderCustomModelChain(PoseStack ms, MultiBufferSource buffer, float animation, float length, int light, ModelResourceLocation chainModel) {
 
-        // chain has lots of ugly clipping at angles blech
-        for (float transform = -1; transform < length + 1 ; transform += 1.0f) {
-            float currentPos = transform + animation;
-            if (currentPos < -1 || currentPos > length) {
-                continue;
-            }
-
+        for (float yOffset = 0; yOffset < length; yOffset += 1) {
             ms.pushPose();
-            ms.translate(0, currentPos, 0);
+            ms.translate(0, yOffset, 0);
 
             // TODO: CACHING? STORE ModelResourceLocation and Baked model in map?
             ModelBlockRenderer blockRenderer = Minecraft.getInstance().getBlockRenderer().getModelRenderer();
 
             BakedModel bakedModel = Minecraft.getInstance().getModelManager().getModel(chainModel);
 
-            chaincompat$renderPart(ms, buffer.getBuffer(RenderType.CUTOUT_MIPPED), bakedModel, light, animation);
-
-            // Possible to get quads, vertices, etc. from Json/Baked Model?
-            // Get shape using those, then scroll UVs, like the original chain render method?
-//            blockRenderer.renderModel(
-//                    ms.last(),
-//                    buffer.getBuffer(RenderType.CUTOUT_MIPPED),
-//                    null,
-//                    bakedModel,
-//                    0.0f,
-//                    0.0f,
-//                    0.0f,
-//                    light,
-//                    OverlayTexture.NO_OVERLAY,
-//                    ModelData.EMPTY,
-//                    RenderType.CUTOUT_MIPPED
-//            );
-
-            /*
-             * BLOCK-BASED IMPLEMENTATION
-             *
-             * SuperByteBuffer linkBuffer = CachedBuffers.block(BuiltInRegistries.BLOCK.get(chainModel).defaultBlockState());
-             *
-             * linkBuffer
-             *        .light(light)
-             *        .renderInto(ms, buffer.getBuffer(RenderType.cutoutMipped()));
-             */
+            chaincompat$renderCustomPart(ms, buffer.getBuffer(RenderType.CUTOUT_MIPPED), bakedModel, light, animation);
 
             ms.popPose();
         }
     }
 
     @Unique
-    private static void chaincompat$renderPart(PoseStack pPoseStack, VertexConsumer pConsumer, BakedModel bakedModel, int light, float animation) {
+    private static void chaincompat$renderCustomPart(PoseStack pPoseStack, VertexConsumer pConsumer, BakedModel bakedModel, int light, float animation) {
         PoseStack.Pose pose = pPoseStack.last();
 
-        RandomSource random = RandomSource.create();
+        List<BakedQuad> quads = bakedModel.getQuads(null, null, RandomSource.create());
 
-        List<BakedQuad> bakedQuads = bakedModel.getQuads(null, null, random);
+        for (BakedQuad quad : quads) {
+            int[] vertexData = quad.getVertices();
+            TextureAtlasSprite sprite = quad.getSprite();
 
-        // This code appears to work... now can UVs be shift from it?
+            float minV = sprite.getV0();
+            float maxV = sprite.getV1();
+            float spriteHeight = maxV - minV;
+            float animOffset = (animation * spriteHeight);
 
-        for (BakedQuad bakedQuad : bakedQuads) {
-            pConsumer.putBulkData(pose, bakedQuad, 1.0f, 1.0f, 1.0f, 1.0f, light, OverlayTexture.NO_OVERLAY);
+            for (int vertex = 0; vertex < 4; vertex++) {
+                Vec3 coords = BakedQuadHelper.getXYZ(vertexData, vertex);
+                float u = BakedQuadHelper.getU(vertexData, vertex);
+                float v = BakedQuadHelper.getV(vertexData, vertex);
+
+                float currentV = v - minV;
+                float animatedV = (currentV + animOffset) % spriteHeight;
+
+                pConsumer.addVertex(pose, (float) coords.x(), (float) coords.y(), (float) coords.z())
+                        .setColor(1.0f, 1.0f, 1.0f, 1.0f)
+                        .setUv(u, minV + animatedV)
+                        .setOverlay(OverlayTexture.NO_OVERLAY)
+                        .setLight(light)
+                        .setNormal(pose, 0.0f, 1.0f, 0.0f);
+            }
+
+//          pConsumer.putBulkData(pose, bakedQuad, 1.0f, 1.0f, 1.0f, 1.0f, light, OverlayTexture.NO_OVERLAY);
         }
     }
 }
