@@ -10,6 +10,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.ModelBlockRenderer;
+import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.ModelResourceLocation;
@@ -17,6 +18,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
@@ -27,6 +29,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.model.data.ModelData;
 import net.strangelyng.createchaincompat.ChainConveyorInterface;
 import net.strangelyng.createchaincompat.datamaps.ChainTexData;
+import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -54,6 +57,11 @@ public abstract class ChainConveyorRendererMixin {
     private static void renderPart(PoseStack pPoseStack, VertexConsumer pConsumer, float pMaxY, float pX0, float pZ0,
                                    float pX1, float pZ1, float pX2, float pZ2, float pX3, float pZ3, float pMinU, float pMaxU, float pMinV,
                                    float pMaxV, int light1, int light2, boolean far) {}
+
+    @Shadow
+    private static void renderQuad(Matrix4f pPose, PoseStack.Pose pNormal, VertexConsumer pConsumer, float pMinY, float pMaxY,
+                                   float pMinX, float pMinZ, float pMaxX, float pMaxZ, float pMinU, float pMaxU, float pMinV, float pMaxV,
+                                   int light1, int light2) {}
 
     // TODO: READ FROM CONFIG INSTEAD OF DATAMAP
     @Inject(method = "renderChains", at = @At(
@@ -150,19 +158,23 @@ public abstract class ChainConveyorRendererMixin {
 
             BakedModel bakedModel = Minecraft.getInstance().getModelManager().getModel(chainModel);
 
-            blockRenderer.renderModel(
-                    ms.last(),
-                    buffer.getBuffer(RenderType.CUTOUT_MIPPED),
-                    null,
-                    bakedModel,
-                    0.0f,
-                    0.0f,
-                    0.0f,
-                    light,
-                    OverlayTexture.NO_OVERLAY,
-                    ModelData.EMPTY,
-                    RenderType.CUTOUT_MIPPED
-            );
+            chaincompat$renderPart(ms, buffer.getBuffer(RenderType.CUTOUT_MIPPED), bakedModel, light, animation);
+
+            // Possible to get quads, vertices, etc. from Json/Baked Model?
+            // Get shape using those, then scroll UVs, like the original chain render method?
+//            blockRenderer.renderModel(
+//                    ms.last(),
+//                    buffer.getBuffer(RenderType.CUTOUT_MIPPED),
+//                    null,
+//                    bakedModel,
+//                    0.0f,
+//                    0.0f,
+//                    0.0f,
+//                    light,
+//                    OverlayTexture.NO_OVERLAY,
+//                    ModelData.EMPTY,
+//                    RenderType.CUTOUT_MIPPED
+//            );
 
             /*
              * BLOCK-BASED IMPLEMENTATION
@@ -175,6 +187,21 @@ public abstract class ChainConveyorRendererMixin {
              */
 
             ms.popPose();
+        }
+    }
+
+    @Unique
+    private static void chaincompat$renderPart(PoseStack pPoseStack, VertexConsumer pConsumer, BakedModel bakedModel, int light, float animation) {
+        PoseStack.Pose pose = pPoseStack.last();
+
+        RandomSource random = RandomSource.create();
+
+        List<BakedQuad> bakedQuads = bakedModel.getQuads(null, null, random);
+
+        // This code appears to work... now can UVs be shift from it?
+
+        for (BakedQuad bakedQuad : bakedQuads) {
+            pConsumer.putBulkData(pose, bakedQuad, 1.0f, 1.0f, 1.0f, 1.0f, light, OverlayTexture.NO_OVERLAY);
         }
     }
 }
