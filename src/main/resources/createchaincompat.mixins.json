@@ -2,6 +2,7 @@
   "required": true,
   "package": "net.strangelyng.createchaincompat.mixin",
   "compatibilityLevel": "JAVA_21",
+  "priority": 900,
   "mixins": [
     "accessors.BlockEntityAccessor",
     "create.chains.ChainConveyorBlockMixin",
